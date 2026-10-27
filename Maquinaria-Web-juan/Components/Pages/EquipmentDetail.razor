@@ -1,0 +1,71 @@
+@page "/equipments/{Id}"
+@rendermode InteractiveServer
+@inject EquipmentApiClient Api
+@using Maquinaria_Web_juan.Models
+
+<PageTitle>Detalle de equipo</PageTitle>
+
+<h1>Detalle de equipo</h1>
+
+@if (_cargando)
+{
+    <p>Cargando...</p>
+}
+else if (_error != null)
+{
+    @* HttpRequestException: la API no responde (distinto a "no existe"). *@
+    <div class="alert alert-danger">@_error</div>
+}
+else if (_equipo == null)
+{
+    @* GetByIdAsync devolvió null → el Id no existe en la API. *@
+    <div class="alert alert-warning">No se encontró el equipo solicitado.</div>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-2">Id</dt>
+        <dd class="col-sm-10">@_equipo.Id</dd>
+
+        <dt class="col-sm-2">Código</dt>
+        <dd class="col-sm-10">@_equipo.Code</dd>
+
+        <dt class="col-sm-2">Nombre</dt>
+        <dd class="col-sm-10">@_equipo.Name</dd>
+
+        <dt class="col-sm-2">Ubicación</dt>
+        <dd class="col-sm-10">@_equipo.Location</dd>
+
+        <dt class="col-sm-2">Estado</dt>
+        <dd class="col-sm-10">@_equipo.Status</dd>
+    </dl>
+
+    <a class="btn btn-sm btn-outline-primary" href="equipments/@_equipo.Id/edit">Editar</a>
+    <a class="btn btn-sm btn-outline-secondary" href="equipments">Volver</a>
+}
+
+@code {
+    // [Parameter] con el nombre de la ruta ({Id}) → Blazor inyecta el valor de la URL.
+    [Parameter] public string Id { get; set; } = string.Empty;
+
+    private Equipment? _equipo;
+    private bool _cargando = true;
+    private string? _error;
+
+    // Hook de carga: GetByIdAsync → null = no existe; HttpRequestException = API caída.
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _equipo = await Api.GetByIdAsync(Id);
+        }
+        catch (HttpRequestException)
+        {
+            _error = "No se pudo conectar con la API";
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+}

@@ -1,0 +1,122 @@
+@page "/equipments/{Id}/edit"
+@rendermode InteractiveServer
+@inject EquipmentApiClient Api
+@inject NavigationManager Nav
+@using Maquinaria_Web_juan.DTOs
+@using Maquinaria_Web_juan.Models
+
+<PageTitle>Editar equipo</PageTitle>
+
+<h1>Editar equipo</h1>
+
+@if (_cargando)
+{
+    <p>Cargando...</p>
+}
+else if (_error != null)
+{
+    @* HttpRequestException: la API no responde al cargar el equipo. *@
+    <div class="alert alert-danger">@_error</div>
+}else if (_form == null)
+{
+    <div class="alert alert-warning">No se encontró el equipo solicitado.</div>
+}
+else
+{
+    @* Mismo form que el alta; PUT reenvía los datos con el Id en la URL. *@
+    <EditForm Model="_form" OnValidSubmit="Guardar">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label>Nombre</label>
+            <InputText class="form-control" @bind-Value="_form.Name" />
+            <ValidationMessage For="() => _form.Name" class="text-danger" />
+        </div>
+
+        <div class="mb-3">
+            <label>Código</label>
+            <InputText class="form-control" @bind-Value="_form.Code" />
+            <ValidationMessage For="() => _form.Code" class="text-danger" />
+        </div>
+
+        <div class="mb-3">
+            <label>Ubicación</label>
+            <InputText class="form-control" @bind-Value="_form.Location" />
+            <ValidationMessage For="() => _form.Location" class="text-danger" />
+        </div>
+
+        <div class="mb-3">
+            <label>Estado</label>
+            <InputText class="form-control" @bind-Value="_form.Status" />
+            <ValidationMessage For="() => _form.Status" class="text-danger" />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-sm" disabled="@_guardando">Guardar</button>
+        <a class="btn btn-outline-secondary btn-sm" href="equipments">Cancelar</a>
+    </EditForm>
+}
+
+@if (_error != null)
+{
+    <div class="alert alert-danger mt-2">@_error</div>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = string.Empty;
+
+    private EquipmentUpdateDTO? _form;
+    private bool _cargando = true;
+    private bool _guardando = false;
+    private string? _error;
+
+    // Carga: GET del equipo → copiar sus datos al DTO del form (para editarlos).
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // 1) GET del equipo actual, 2) copiar sus datos al DTO del form.
+            var equipo = await Api.GetByIdAsync(Id);
+
+            if (equipo != null)
+            {
+                _form = new EquipmentUpdateDTO
+                {
+                    Name = equipo.Name,
+                    Code = equipo.Code,
+                    Location = equipo.Location,
+                    Status = equipo.Status
+                };
+            }
+        }
+        catch (HttpRequestException)
+        {
+            // Sin conexión. Se informa aparte para no confundir con "no existe".
+            _error = "No se pudo conectar con la API";
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    // PUT + redirect a la lista; el catch muestra el 400 de la API (regla inválida).
+    private async Task Guardar()
+    {
+        _guardando = true;
+        _error = null;
+
+        try
+        {
+            await Api.UpdateAsync(Id, _form!);
+            Nav.NavigateTo("equipments");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+}

@@ -1,0 +1,106 @@
+@page "/equipments"
+@rendermode InteractiveServer
+@inject EquipmentApiClient Api
+@using Maquinaria_Web_juan.Models
+
+<PageTitle>Equipos</PageTitle>
+
+<h1>Equipos</h1>
+
+<p>
+    <a class="btn btn-primary btn-sm" href="equipments/nuevo">Nuevo equipo</a>
+</p>
+
+@if (_cargando)
+{
+    <p>Cargando...</p>
+}
+else if (_error != null)
+{
+    @* HttpRequestException (API caída) u otro error del GET llegan acá. *@
+    <div class="alert alert-danger">@_error</div>
+}
+else
+{
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Ubicación</th>
+                <th>Estado</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var eq in _equipos)
+            {
+                <tr>
+                    <td>@eq.Code</td>
+                    <td>@eq.Name</td>
+                    <td>@eq.Location</td>
+                    <td>@eq.Status</td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-secondary" href="equipments/@eq.Id">Ver</a>
+                        <a class="btn btn-sm btn-outline-primary" href="equipments/@eq.Id/edit">Editar</a>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Eliminar(eq)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (_mensaje != null)
+{
+    <div class="alert alert-success">@_mensaje</div>
+}
+
+@code {
+    private List<Equipment> _equipos = new();
+    private bool _cargando = true;
+    private string? _error;
+    private string? _mensaje;
+
+    // Hook de carga inicial: trae la lista; HttpRequestException → mensaje de API caída.
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _equipos = await Api.GetAllAsync();
+        }
+        catch (HttpRequestException)
+        {
+            // No se pudo conectar: la API probablemente no está corriendo.
+            _error = "No se pudo conectar con la API (¿está corriendo en el puerto 5244?)";
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    // DELETE + recarga de la lista; sin catch, una excepción cortaría el circuito.
+    private async Task Eliminar(Equipment eq)
+    {
+        try
+        {
+            var ok = await Api.DeleteAsync(eq.Id);
+
+            if (ok)
+            {
+                _mensaje = $"Equipo {eq.Code} eliminado";
+                // Recargamos la lista para que desaparezca de la tabla.
+                _equipos = await Api.GetAllAsync();
+            }
+            else
+            {
+                _error = "El equipo no existe (ya fue eliminado)";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            _error = "No se pudo conectar con la API al eliminar";
+        }
+    }
+}

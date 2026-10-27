@@ -1,0 +1,74 @@
+@page "/equipments/nuevo"
+@rendermode InteractiveServer
+@inject EquipmentApiClient Api
+@inject NavigationManager Nav
+@using Maquinaria_Web_juan.DTOs
+
+<PageTitle>Nuevo equipo</PageTitle>
+
+<h1>Nuevo equipo</h1>
+
+@* OnValidSubmit dispara Guardar() solo si pasan las validaciones del DTO. *@
+<EditForm Model="_form" OnValidSubmit="Guardar">
+    <DataAnnotationsValidator />
+
+    <div class="mb-3">
+        <label>Nombre</label>
+        <InputText class="form-control" @bind-Value="_form.Name" />
+        <ValidationMessage For="() => _form.Name" class="text-danger" />
+    </div>
+
+    <div class="mb-3">
+        <label>Código</label>
+        <InputText class="form-control" @bind-Value="_form.Code" />
+        <ValidationMessage For="() => _form.Code" class="text-danger" />
+    </div>
+
+    <div class="mb-3">
+        <label>Ubicación</label>
+        <InputText class="form-control" @bind-Value="_form.Location" />
+        <ValidationMessage For="() => _form.Location" class="text-danger" />
+    </div>
+
+    <div class="mb-3">
+        <label>Estado</label>
+        <InputText class="form-control" @bind-Value="_form.Status" />
+        <ValidationMessage For="() => _form.Status" class="text-danger" />
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-sm" disabled="@_guardando">Guardar</button>
+    <a class="btn btn-outline-secondary btn-sm" href="equipments">Cancelar</a>
+</EditForm>
+
+@if (_error != null)
+{
+    @* Mensaje de error: 400 de la API (regla inválida) u otra excepción. *@
+    <div class="alert alert-danger mt-2">@_error</div>
+}
+
+@code {
+    private EquipmentCreateDTO _form = new();
+    private bool _guardando = false;
+    private string? _error;
+
+    // POST + redirect a la lista; el catch muestra el 400 de la API (regla inválida).
+    private async Task Guardar()
+    {
+        _guardando = true;
+        _error = null;
+
+        try
+        {
+            await Api.CreateAsync(_form);
+            Nav.NavigateTo("equipments"); // redirect a la lista
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+}
